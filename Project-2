@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fluid Architecture · Responsive Design</title>
+
+    <!-- ============================================================
+    STYLES — Mobile-First, Fluid, Accessible
+    ============================================================ -->
+    <style>
+        /* ---------- RESET & BASE ---------- */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --color-bg: #f8f6f3;
+            --color-surface: #ffffff;
+            --color-text: #1e1e2a;
+            --color-muted: #5a5a6e;
+            --color-accent: #c44536;
+            --color-accent-light: #e8b4a8;
+            --color-border: #d9d4ce;
+            --color-shadow: rgba(0, 0, 0, 0.06);
+
+            --font-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'SF Mono', 'JetBrains Mono', monospace;
+
+            /* Fluid spacing */
+            --space-xs: clamp(0.25rem, 0.5vw, 0.5rem);
+            --space-sm: clamp(0.5rem, 1vw, 1rem);
+            --space-md: clamp(1rem, 2vw, 2rem);
+            --space-lg: clamp(2rem, 4vw, 4rem);
+            --space-xl: clamp(3rem, 6vw, 6rem);
+
+            /* Fluid type — clamp(min, ideal, max) */
+            --text-xs: clamp(0.7rem, 0.8vw + 0.4rem, 0.85rem);
+            --text-sm: clamp(0.85rem, 1vw + 0.4rem, 1rem);
+            --text-base: clamp(1rem, 1.2vw + 0.5rem, 1.2rem);
+            --text-md: clamp(1.2rem, 1.6vw + 0.6rem, 1.6rem);
+            --text-lg: clamp(1.6rem, 2.5vw + 0.8rem, 2.4rem);
+            --text-xl: clamp(2.4rem, 4vw + 1rem, 4rem);
+            --text-2xl: clamp(3.2rem, 5.5vw + 1.5rem, 5.6rem);
+
+            --radius: 0.75rem;
+            --radius-lg: 1.5rem;
+            --transition: 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+
+            /* Nav height for spacing */
+            --nav-height: 4rem;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            font-family: var(--font-base);
+            font-size: var(--text-base);
+            line-height: 1.6;
+            color: var(--color-text);
+            background: var(--color-bg);
+            padding: 0 var(--space-sm);
+            padding-top: var(--nav-height);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* ---------- SKIP LINK (accessibility) ---------- */
+        .skip-link {
+            position: fixed;
+            top: -999px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--color-text);
+            color: #fff;
+            padding: var(--space-sm) var(--space-md);
+            border-radius: 0 0 var(--radius) var(--radius);
+            z-index: 9999;
+            font-weight: 600;
+            text-decoration: none;
+            transition: top 0.2s;
+        }
+        .skip-link:focus {
+            top: 0;
+        }
+
+        /* ---------- CONTAINER ---------- */
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: var(--space-md) 0 var(--space-xl);
+        }
+
+        /* ---------- NAVIGATION (Popover API) ---------- */
+        .site-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: var(--nav-height);
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--space-md);
+            box-shadow: 0 2px 12px var(--color-shadow);
+        }
+
+        .site-nav .logo {
+            font-weight: 700;
+            font-size: var(--text-md);
+            letter-spacing: -0.02em;
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+            color: var(--color-text);
+            text-decoration: none;
+        }
+        .site-nav .logo span {
+            color: var(--color-accent);
+        }
+
+        /* Popover trigger button */
+        .nav-toggle {
+            background: none;
+            border: none;
+            padding: var(--space-xs);
+            cursor: pointer;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-text);
+            transition: background var(--transition);
+            min-width: 44px;
+            min-height: 44px;
+            /* touch target */;
+        }
+        .nav-toggle:hover,
+        .nav-toggle:focus-visible {
+            background: var(--color-border);
+        }
+        .nav-toggle svg {
+            width: 28px;
+            height: 28px;
+            display: block;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* Popover element */
+        .nav-popover {
+            position: fixed;
+            top: var(--nav-height);
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: var(--space-lg) var(--space-md);
+            border: none;
+            border-top: 1px solid var(--color-border);
+            margin: 0;
+            overflow-y: auto;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            opacity: 0;
+            transform: translateY(-8px);
+            pointer-events: none;
+            /* hidden by default */;
+        }
+        .nav-popover:popover-open {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .nav-popover ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+        }
+        .nav-popover ul li a {
+            display: block;
+            padding: var(--space-sm) var(--space-md);
+            font-size: var(--text-lg);
+            font-weight: 500;
+            color: var(--color-text);
+            text-decoration: none;
+            border-radius: var(--radius);
+            transition: background var(--transition), color var(--transition);
+            min-height: 52px;
+            /* accessible touch */;
+        }
+        .nav-popover ul li a:hover,
+        .nav-popover ul li a:focus-visible {
+            background: var(--color-accent-light);
+            color: var(--color-accent);
+        }
+
+        /* Close button inside popover */
+        .nav-close {
+            display: block;
+            margin: var(--space-md) auto 0;
+            padding: var(--space-sm) var(--space-lg);
+            background: var(--color-border);
+            border: none;
+            border-radius: var(--radius);
+            font-size: var(--text-sm);
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--color-text);
+            transition: background var(--transition);
+            min-height: 44px;
+            min-width: 44px;
+        }
+        .nav-close:hover,
+        .nav-close:focus-visible {
+            background: var(--color-accent);
+            color: #fff;
+        }
+
+        /* ---------- HERO / HEADER ---------- */
+        .hero {
+            text-align: center;
+            padding: var(--space-xl) var(--space-sm) var(--space-lg);
+            background: var(--color-surface);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 4px 24px var(--color-shadow);
+            margin-bottom: var(--space-xl);
+            border: 1px solid var(--color-border);
+        }
+        .hero h1 {
+            font-size: var(--text-2xl);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            margin-bottom: var(--space-sm);
+        }
+        .hero h1 span {
+            background: linear-gradient(135deg, var(--color-accent), #a83226);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero p {
+            font-size: var(--text-md);
+            color: var(--color-muted);
+            max-width: 640px;
+            margin: 0 auto var(--space-md);
+        }
+        .hero .badge {
+            display: inline-block;
+            background: var(--color-accent-light);
+            color: var(--color-accent);
+            padding: var(--space-xs) var(--space-md);
+            border-radius: 100px;
+            font-size: var(--text-xs);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        /* ---------- GRID LAYOUT (Macro) ---------- */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--space-lg);
+            margin-bottom: var(--space-xl);
+        }
+
+        /* ---------- CARD (used for sections) ---------- */
+        .card {
+            background: var(--color-surface);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            border: 1px solid var(--color-border);
+            box-shadow: 0 2px 12px var(--color-shadow);
+            transition: box-shadow var(--transition);
+        }
+        .card:hover {
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.07);
+        }
+
+        .card h2 {
+            font-size: var(--text-lg);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: var(--space-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+        .card h2 .emoji {
+            font-size: var(--text-md);
+        }
+        .card p,
+        .card li {
+            color: var(--color-muted);
+            font-size: var(--text-sm);
+            line-height: 1.7;
+        }
+        .card ul,
+        .card ol {
+            padding-left: var(--space-md);
+            margin: var(--space-sm) 0;
+        }
+        .card li {
+            margin-bottom: var(--space-xs);
+        }
+
+        /* ---------- FLEXBOX COMPONENTS (Micro) ---------- */
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+            align-items: center;
+            margin-top: var(--space-md);
+        }
+        .flex-row .btn {
+            flex: 0 1 auto;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-xs);
+            padding: var(--space-sm) var(--space-lg);
+            background: var(--color-text);
+            color: #fff;
+            border: none;
+            border-radius: 100px;
+            font-weight: 600;
+            font-size: var(--text-sm);
+            cursor: pointer;
+            transition: background var(--transition), transform var(--transition);
+            text-decoration: none;
+            min-height: 44px;
+            min-width: 44px;
+            /* accessible */;
+        }
+        .btn:hover,
+        .btn:focus-visible {
+            background: var(--color-accent);
+            transform: scale(1.02);
+        }
+        .btn-outline {
+            background: transparent;
+            color: var(--color-text);
+            border: 2px solid var(--color-border);
+        }
+        .btn-outline:hover,
+        .btn-outline:focus-visible {
+            background: var(--color-border);
+            color: var(--color-text);
+            border-color: var(--color-text);
+        }
+
+        /* ---------- FEATURE GRID (inside card) ---------- */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--space-md);
+            margin-top: var(--space-md);
+        }
+        .feature-item {
+            background: var(--color-bg);
+            padding: var(--space-md);
+            border-radius: var(--radius);
+            border-left: 4px solid var(--color-accent);
+        }
+        .feature-item h3 {
+            font-size: var(--text-base);
+            font-weight: 600;
+            margin-bottom: var(--space-xs);
+        }
+        .feature-item p {
+            font-size: var(--text-sm);
+            color: var(--color-muted);
+            margin: 0;
+        }
+        .feature-item code {
+            font-family: var(--font-mono);
+            font-size: var(--text-xs);
+            background: rgba(0, 0, 0, 0.05);
+            padding: 0.1rem 0.4rem;
+            border-radius: 0.25rem;
+            color: var(--color-accent);
+        }
+
+        /* ---------- FLUID TYPOGRAPHY DEMO ---------- */
+        .type-demo {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+            margin-top: var(--space-sm);
+        }
+        .type-demo .sample {
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            border-bottom: 1px dashed var(--color-border);
+            padding-bottom: var(--space-xs);
+        }
+        .type-demo .sample-1 {
+            font-size: clamp(1rem, 2.5vw, 2rem);
+        }
+        .type-demo .sample-2 {
+            font-size: clamp(1.5rem, 4vw, 3.5rem);
+        }
+        .type-demo .sample-3 {
+            font-size: clamp(2rem, 6vw, 5rem);
+        }
+        .type-demo .note {
+            font-size: var(--text-xs);
+            color: var(--color-muted);
+            font-family: var(--font-mono);
+        }
+
+        /* ---------- ACCESSIBILITY BADGE ---------- */
+        .a11y-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-xs);
+            background: #e2f0e6;
+            color: #1e6b3b;
+            padding: var(--space-xs) var(--space-md);
+            border-radius: 100px;
+            font-size: var(--text-xs);
+            font-weight: 600;
+        }
+
+        /* ---------- FOOTER ---------- */
+        .site-footer {
+            margin-top: var(--space-xl);
+            padding: var(--space-lg) 0;
+            border-top: 1px solid var(--color-border);
+            text-align: center;
+            font-size: var(--text-sm);
+            color: var(--color-muted);
+        }
+        .site-footer a {
+            color: var(--color-text);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+        .site-footer a:hover {
+            color: var(--color-accent);
+        }
+
+        /* ---------- RESPONSIVE: TABLET & UP ---------- */
+        @media (min-width: 640px) {
+            .grid-layout {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .feature-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .nav-popover ul {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: var(--space-sm);
+            }
+            .nav-popover ul li a {
+                font-size: var(--text-base);
+                padding: var(--space-xs) var(--space-lg);
+                min-height: 44px;
+            }
+            .nav-close {
+                display: none;
+                /* close button not needed on desktop */;
+            }
+        }
+
+        @media (min-width: 900px) {
+            .grid-layout {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .feature-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .nav-popover {
+                position: static;
+                background: transparent;
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                padding: 0;
+                border: none;
+                opacity: 1;
+                transform: none;
+                pointer-events: auto;
+                overflow: visible;
+                display: flex;
+                align-items: center;
+                width: auto;
+                height: auto;
+                top: auto;
+                left: auto;
+                right: auto;
+                bottom: auto;
+            }
+            .nav-popover ul {
+                flex-direction: row;
+                gap: var(--space-xs);
+                margin: 0;
+            }
+            .nav-popover ul li a {
+                font-size: var(--text-sm);
+                padding: var(--space-xs) var(--space-md);
+                color: var(--color-muted);
+                border-radius: 100px;
+                min-height: 44px;
+            }
+            .nav-popover ul li a:hover,
+            .nav-popover ul li a:focus-visible {
+                background: var(--color-accent-light);
+                color: var(--color-accent);
+            }
+            .nav-toggle {
+                display: none;
+            }
+            .nav-close {
+                display: none;
+            }
+        }
+
+        /* ---------- ZOOM SAFE (accessibility) ---------- */
+        @media screen and (max-width: 500px) {
+            body {
+                padding-left: var(--space-xs);
+                padding-right: var(--space-xs);
+            }
+            .card {
+                padding: var(--space-md);
+            }
+            .hero {
+                padding: var(--space-lg) var(--space-sm);
+            }
+        }
+
+        /* ---------- REDUCED MOTION ---------- */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        /* ---------- PRINT ---------- */
+        @media print {
+            .site-nav {
+                position: static;
+                background: #fff;
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                box-shadow: none;
+                border-bottom: 1px solid #ccc;
+            }
+            .nav-popover {
+                position: static;
+                opacity: 1;
+                transform: none;
+                pointer-events: auto;
+                background: transparent;
+                padding: 0;
+                border: none;
+            }
+            .nav-toggle,
+            .nav-close {
+                display: none !important;
+            }
+            .card {
+                box-shadow: none;
+                border: 1px solid #ccc;
+                break-inside: avoid;
+            }
+            .hero {
+                box-shadow: none;
+                border: 1px solid #ccc;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- ====== SKIP LINK ====== -->
+    <a class="skip-link" href="#main">Skip to main content</a>
+
+    <!-- ====== NAVIGATION (Popover API) ====== -->
+    <nav class="site-nav" aria-label="Main navigation">
+        <a href="#" class="logo" aria-label="Home">
+            <span>◈</span> Fluid<span>.</span>
+        </a>
+
+        <!-- Popover trigger -->
+        <button class="nav-toggle" popovertarget="nav-popover" aria-label="Open menu" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <line x1="4" y1="7" x2="20" y2="7" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="17" x2="20" y2="17" />
+            </svg>
+        </button>
+
+        <!-- Popover menu -->
+        <div id="nav-popover" class="nav-popover" popover role="menu" aria-label="Main menu">
+            <ul>
+                <li><a href="#layout" role="menuitem">Layout</a></li>
+                <li><a href="#typography" role="menuitem">Typography</a></li>
+                <li><a href="#components" role="menuitem">Components</a></li>
+                <li><a href="#accessibility" role="menuitem">A11y</a></li>
+                <li><a href="#future" role="menuitem">Future</a></li>
+            </ul>
+            <button class="nav-close" popovertarget="nav-popover" aria-label="Close menu">✕ Close</button>
+        </div>
+    </nav>
+
+    <!-- ====== MAIN CONTENT ====== -->
+    <main id="main" class="container">
+
+        <!-- HERO -->
+        <header class="hero">
+            <h1>Content is <span>Like Water</span></h1>
+            <p>Building responsive architectures from the content out — fluid, accessible, and future-proof.</p>
+            <div class="badge">✦ 62.73% Mobile Traffic</div>
+            <div style="margin-top: var(--space-md); display: flex; flex-wrap: wrap; gap: var(--space-sm); justify-content: center;">
+                <span class="a11y-badge">♿ WCAG Compliant</span>
+                <span class="a11y-badge" style="background:#e6e2f0;color:#4a3f6b;">↕ 500% Zoom</span>
+            </div>
+        </header>
+
+        <!-- ====== GRID LAYOUT (Macro) ====== -->
+        <section class="grid-layout" id="layout">
+
+            <!-- CARD 1: Meta Viewport -->
+            <article class="card">
+                <h2><span class="emoji">📱</span> The Key to the Kingdom</h2>
+                <p><code>&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;</code></p>
+                <div style="margin-top: var(--space-sm); display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); font-size: var(--text-sm);">
+                    <div style="background: #f1e9e7; padding: var(--space-sm); border-radius: var(--radius);">
+                        <strong style="color:#b33a2a;">Without Tag</strong>
+                        <p style="margin:0; font-size:var(--text-xs);">800px · fixed width — the lie</p>
+                    </div>
+                    <div style="background: #e2f0e6; padding: var(--space-sm); border-radius: var(--radius);">
+                        <strong style="color:#1e6b3b;">With Tag</strong>
+                        <p style="margin:0; font-size:var(--text-xs);">Seamless integration — the truth</p>
+                    </div>
+                </div>
+                <p style="margin-top: var(--space-sm); font-size: var(--text-xs);">
+                    <strong>✓</strong> width=device-width · <strong>✓</strong> initial-scale=1
+                </p>
+            </article>
+
+            <!-- CARD 2: Mobile-First -->
+            <article class="card">
+                <h2><span class="emoji">📈</span> Mobile-First Strategy</h2>
+                <p>Complexity increases with space.</p>
+                <ul style="list-style: none; padding: 0; margin-top: var(--space-sm);">
+                    <li style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-xs) 0; border-bottom: 1px solid var(--color-border);">
+                        <span style="font-size:var(--text-xs); background:var(--color-text); color:#fff; padding:0.1rem 0.6rem; border-radius:100px;">1</span>
+                        <span><strong>Mobile Core</strong> — Base CSS</span>
+                    </li>
+                    <li style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-xs) 0; border-bottom: 1px solid var(--color-border);">
+                        <span style="font-size:var(--text-xs); background:var(--color-text); color:#fff; padding:0.1rem 0.6rem; border-radius:100px;">2</span>
+                        <span><strong>Tablet</strong> — Layout enhancements</span>
+                    </li>
+                    <li style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-xs) 0;">
+                        <span style="font-size:var(--text-xs); background:var(--color-text); color:#fff; padding:0.1rem 0.6rem; border-radius:100px;">3</span>
+                        <span><strong>Desktop</strong> — High-res assets &amp; full layout</span>
+                    </li>
+                </ul>
+                <p style="font-size: var(--text-xs); color: var(--color-muted); margin-top: var(--space-xs);">⬆ Complexity Increases with Space</p>
+            </article>
+
+            <!-- CARD 3: Breakpoints -->
+            <article class="card">
+                <h2><span class="emoji">🌉</span> Breakpoints are Bridges</h2>
+                <p>Design for content breakage, not device models.</p>
+                <div style="display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-sm);">
+                    <span style="background:var(--color-border); padding:0.2rem 0.8rem; border-radius:100px; font-size:var(--text-xs); font-weight:600;">480px</span>
+                    <span style="background:var(--color-border); padding:0.2rem 0.8rem; border-radius:100px; font-size:var(--text-xs); font-weight:600;">768px</span>
+                    <span style="background:var(--color-border); padding:0.2rem 0.8rem; border-radius:100px; font-size:var(--text-xs); font-weight:600;">1024px</span>
+                    <span style="background:var(--color-accent-light); color:var(--color-accent); padding:0.2rem 0.8rem; border-radius:100px; font-size:var(--text-xs); font-weight:600;">+ content-driven</span>
+                </div>
+                <p style="font-size: var(--text-xs); margin-top: var(--space-sm);">— bridges, not fences —</p>
+            </article>
+        </section>
+
+        <!-- ====== FLEXBOX + GRID HARMONY ====== -->
+        <section class="card" style="margin-bottom: var(--space-xl);" id="components">
+            <h2><span class="emoji">🧩</span> Architectural Harmony: Grid + Flexbox</h2>
+            <p><strong>Grid</strong> for the house (macro) · <strong>Flexbox</strong> for the furniture (micro)</p>
+
+            <div style="display: grid; grid-template-columns: 1fr; gap: var(--space-md); margin-top: var(--space-md);">
+
+                <!-- Grid demo row -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-sm); background: var(--color-bg); padding: var(--space-md); border-radius: var(--radius);">
+                    <div style="background: var(--color-surface); padding: var(--space-sm); border-radius: var(--radius); text-align:center; border:1px solid var(--color-border);">
+                        <span style="font-weight:600;">Header</span>
+                    </div>
+                    <div style="background: var(--color-surface); padding: var(--space-sm); border-radius: var(--radius); text-align:center; border:1px solid var(--color-border); grid-column: span 2;">
+                        <span style="font-weight:600;">Main Body</span>
+                    </div>
+                    <div style="background: var(--color-surface); padding: var(--space-sm); border-radius: var(--radius); text-align:center; border:1px solid var(--color-border);">
+                        <span style="font-weight:600;">Sidebar</span>
+                    </div>
+                    <div style="background: var(--color-surface); padding: var(--space-sm); border-radius: var(--radius); text-align:center; border:1px solid var(--color-border); grid-column: 1 / -1;">
+                        <span style="font-weight:600;">Footer</span>
+                    </div>
+                </div>
+
+                <!-- Flexbox row -->
+                <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; justify-content: space-between; background: var(--color-bg); padding: var(--space-md); border-radius: var(--radius);">
+                    <span style="font-weight:600; font-size:var(--text-sm);">Flexbox →</span>
+                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-xs);">
+                        <span class="btn" style="background:var(--color-accent);">Text</span>
+                        <span class="btn btn-outline">Button</span>
+                        <span class="btn btn-outline">Action</span>
+                    </div>
+                    <span style="font-size:var(--text-xs); color:var(--color-muted);">← one-dimensional</span>
+                </div>
+            </div>
+
+            <p style="font-size: var(--text-xs); color: var(--color-muted); margin-top: var(--space-sm);">
+                <code>grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));</code>
+            </p>
+        </section>
+
+        <!-- ====== TYPOGRAPHY + FLUID ====== -->
+        <section class="card" style="margin-bottom: var(--space-xl);" id="typography">
+            <h2><span class="emoji">💧</span> Fluid Typography with <code>clamp()</code></h2>
+            <p>Min → Ideal → Max size, all in one line.</p>
+
+            <div class="type-demo">
+                <div class="sample sample-1">clamp(1rem, 2.5vw, 2rem) — heading</div>
+                <div class="sample sample-2">clamp(1.5rem, 4vw, 3.5rem) — subheading</div>
+                <div class="sample sample-3">clamp(2rem, 6vw, 5rem) — display</div>
+                <span class="note">Resize the viewport to see the magic ✦</span>
+            </div>
+        </section>
+
+        <!-- ====== ACCESSIBILITY ====== -->
+        <section class="card" style="margin-bottom: var(--space-xl);" id="accessibility">
+            <h2><span class="emoji">♿</span> Accessibility is Non-Negotiable</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-top: var(--space-sm);">
+                <div style="background:#f1e9e7; padding:var(--space-md); border-radius:var(--radius);">
+                    <strong style="color:#b33a2a;">Bad</strong>
+                    <p style="font-size:var(--text-sm); margin:0;">Restricted Zoom without Zoom</p>
+                </div>
+                <div style="background:#e2f0e6; padding:var(--space-md); border-radius:var(--radius);">
+                    <strong style="color:#1e6b3b;">Good</strong>
+                    <p style="font-size:var(--text-sm); margin:0;">Allow up to 500% Zoom · WCAG Compliant</p>
+                </div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-md);">
+                <span style="background:var(--color-text); color:#fff; padding:0.2rem 1rem; border-radius:100px; font-size:var(--text-xs);">44px × 44px touch targets</span>
+                <span style="background:var(--color-accent-light); color:var(--color-accent); padding:0.2rem 1rem; border-radius:100px; font-size:var(--text-xs);">User-Controlled Magnification</span>
+                <span style="background:var(--color-border); padding:0.2rem 1rem; border-radius:100px; font-size:var(--text-xs);">Skip link · focus states</span>
+            </div>
+            <p style="font-size: var(--text-xs); margin-top: var(--space-sm);">— designing for thumbs: easy reach vs. hard reach —</p>
+        </section>
+
+        <!-- ====== FUTURE ====== -->
+        <section class="card" style="margin-bottom: var(--space-xl);" id="future">
+            <h2><span class="emoji">🚀</span> Future-Proofing the Web</h2>
+            <p><strong>Beyond the Viewport:</strong> Container Queries</p>
+            <blockquote style="border-left: 4px solid var(--color-accent); padding-left: var(--space-md); margin: var(--space-sm) 0; font-style: italic; color: var(--color-muted);">
+                “Coding for the device that hasn’t been invented yet.”
+            </blockquote>
+            <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-sm);">
+                <span style="background:var(--color-bg); padding:0.2rem 0.8rem; border-radius:100px; font-size:var(--text-xs); font-family:var(--font-mono);">@container</span>
+                <span style="background:var(--color-bg); padding:0.2rem 0.8rem; border-radius:100px; font-size:var(--text-xs); font-family:var(--font-mono);">style queries</span>
+                <span style="background:var(--color-bg); padding:0.2rem 0.8rem; border-radius:100px; font-size:var(--text-xs); font-family:var(--font-mono);">layer cascade</span>
+            </div>
+        </section>
+
+        <!-- ====== RESOURCES ====== -->
+        <section class="card" style="margin-bottom: var(--space-xl);">
+            <h2><span class="emoji">📚</span> Resources &amp; Q&amp;A</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-top: var(--space-sm);">
+                <div>
+                    <h4 style="font-size:var(--text-sm); font-weight:600;">Documentation</h4>
+                    <ul style="font-size:var(--text-sm); list-style:none; padding:0;">
+                        <li>→ <a href="#" style="color:var(--color-text);">MDN Web Docs</a></li>
+                        <li>→ <a href="#" style="color:var(--color-text);">CSS-Tricks</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 style="font-size:var(--text-sm); font-weight:600;">Tools</h4>
+                    <ul style="font-size:var(--text-sm); list-style:none; padding:0;">
+                        <li>→ Fluid Type Scale Calculator</li>
+                        <li>→ CanIUse.com</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====== CHECKLIST ====== -->
+        <section class="card" style="background: var(--color-bg); border: 2px solid var(--color-accent-light);">
+            <h2><span class="emoji">✅</span> Implementation Checklist</h2>
+            <ul style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xs); list-style:none; padding:0; font-size:var(--text-sm);">
+                <li style="padding:var(--space-xs);">✅ Meta Tag: width=device-width</li>
+                <li style="padding:var(--space-xs);">✅ Mobile-First Base CSS</li>
+                <li style="padding:var(--space-xs);">✅ Layout: Grid (Macro) &amp; Flexbox (Micro)</li>
+                <li style="padding:var(--space-xs);">✅ Fluid Units (%, rem, vw)</li>
+                <li style="padding:var(--space-xs);">✅ Hamburger / Popover Navigation</li>
+                <li style="padding:var(--space-xs);">✅ Accessible Touch Targets &amp; Zoom</li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- ====== FOOTER ====== -->
+    <footer class="site-footer">
+        <p style="font-size:var(--text-xs);">
+            Built with <span style="color:var(--color-accent);">♥</span> — Fluid Architecture · Decoded Labs
+            <br />
+            <span style="font-size:var(--text-xs); color:var(--color-muted);">
+                Seamless Integration · WCAG Compliant · Container Queries Ready
+            </span>
+        </p>
+    </footer>
+
+    <!-- ============================================================
+    SCRIPTS — Popover API polyfill (minimal) + ARIA
+    ============================================================ -->
+    <script>
+        (function() {
+            'use strict';
+
+            const toggle = document.querySelector('.nav-toggle');
+            const popover = document.getElementById('nav-popover');
+            const closeBtn = document.querySelector('.nav-close');
+            const links = popover ? popover.querySelectorAll('a[role="menuitem"]') : [];
+
+            // ---- Toggle aria-expanded ----
+            if (toggle && popover) {
+                const updateAria = () => {
+                    const isOpen = popover.matches(':popover-open');
+                    toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                };
+
+                // Observe popover attribute changes (browser sets popover attribute)
+                const observer = new MutationObserver(() => updateAria());
+                observer.observe(popover, { attributes: true, attributeFilter: ['popover'] });
+
+                // Also listen for toggle clicks (browser fires before popover change)
+                toggle.addEventListener('click', () => {
+                    // defer to let browser update popover state
+                    requestAnimationFrame(updateAria);
+                });
+
+                // Close on Escape (browser does this, but we keep aria in sync)
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && popover.matches(':popover-open')) {
+                        requestAnimationFrame(updateAria);
+                    }
+                });
+
+                // Close on outside click (via popover light-dismiss) — sync aria
+                document.addEventListener('click', (e) => {
+                    if (popover.matches(':popover-open')) {
+                        const target = e.target;
+                        if (!popover.contains(target) && target !== toggle && !toggle.contains(target)) {
+                            requestAnimationFrame(updateAria);
+                        }
+                    }
+                });
+
+                // Close button
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        popover.hidePopover();
+                        requestAnimationFrame(updateAria);
+                    });
+                }
+
+                // Close on link click (for single-page nav)
+                links.forEach(link => {
+                    link.addEventListener('click', () => {
+                        if (window.innerWidth < 900) {
+                            popover.hidePopover();
+                            requestAnimationFrame(updateAria);
+                        }
+                    });
+                });
+
+                // Initial state
+                updateAria();
+            }
+
+            // ---- Smooth scroll for anchor links (progressive enhancement) ----
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    if (href === '#') return;
+                    const target = document.querySelector(href);
+                    if (target) {
+                        e.preventDefault();
+                        const navHeight = parseInt(getComputedStyle(document.documentElement)
+                            .getPropertyValue('--nav-height')) || 64;
+                        const top = target.getBoundingClientRect().top + window.pageYOffset - navHeight - 16;
+                        window.scrollTo({ top, behavior: 'smooth' });
+                    }
+                });
+            });
+
+        })();
+    </script>
+
+</body>
+</html>
